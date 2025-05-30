@@ -9,17 +9,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
-// ELEV8 Logo Component inspired by Framer's geometric design
+// ELEV8 Logo Component using the actual logo image
 function ELEV8Logo() {
   return (
-    <div className="flex items-center gap-3 mb-8">
-      <div className="relative w-8 h-8">
-        {/* Geometric E made of rectangles */}
-        <div className="absolute top-0 left-0 w-6 h-1.5 bg-black"></div>
-        <div className="absolute top-0 left-0 w-1.5 h-8 bg-black"></div>
-        <div className="absolute top-3.25 left-0 w-4 h-1.5 bg-black"></div>
-        <div className="absolute bottom-0 left-0 w-6 h-1.5 bg-black"></div>
-      </div>
+    <div className="flex flex-col items-center gap-2 mb-8">
+      <img 
+        src="/images/Elev8rlogo.png" 
+        alt="ELEV8 Logo" 
+        className="w-12 h-12 object-contain"
+      />
       <span className="text-2xl font-bold tracking-tight">ELEV8</span>
     </div>
   )
