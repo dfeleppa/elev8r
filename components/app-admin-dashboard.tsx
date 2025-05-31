@@ -40,36 +40,12 @@ export default function AppAdminDashboard() {
   const [creating, setCreating] = useState(false)
   const { toast } = useToast()
 
-  // Only allow app admins to access this component
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
-  }
-
-  if (!profile?.is_app_admin) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="w-96">
-          <CardHeader>
-            <CardTitle className="text-red-600">Access Denied</CardTitle>
-            <CardDescription>
-              You need App Admin privileges to access this dashboard.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    )
-  }
   const fetchUsers = async () => {
     setLoadingUsers(true)
     try {
       const users = await getAllUsers()
-      setUsers(users || [])
-    } catch (error) {
-      console.error('Error fetching users:', error)
+      setUsers(users || [])    } catch (error) {
+      console.log('Error fetching users:', error)
       toast({
         title: "Error",
         description: "Failed to fetch users",
@@ -79,14 +55,16 @@ export default function AppAdminDashboard() {
       setLoadingUsers(false)
     }
   }
-
   const fetchOrganizations = async () => {
+    console.log('AppAdminDashboard: fetchOrganizations called')
     setLoadingOrgs(true)
     try {
+      console.log('AppAdminDashboard: calling getAllOrganizations...')
       const orgs = await getAllOrganizations()
+      console.log('AppAdminDashboard: getAllOrganizations returned:', orgs)
       setOrganizations(orgs || [])
     } catch (error) {
-      console.error('Error fetching organizations:', error)
+      console.log('Error fetching organizations:', error)
       toast({
         title: "Error", 
         description: "Failed to fetch organizations",
@@ -96,7 +74,6 @@ export default function AppAdminDashboard() {
       setLoadingOrgs(false)
     }
   }
-
   const handleCreateOrganization = async () => {
     if (!newOrgName.trim() || !selectedAdminId) {
       toast({
@@ -120,9 +97,8 @@ export default function AppAdminDashboard() {
         setSelectedAdminId('')
         setIsCreateOrgOpen(false)
         fetchOrganizations() // Refresh organizations list
-      }
-    } catch (error) {
-      console.error('Error creating organization:', error)
+      }    } catch (error) {
+      console.log('Error creating organization:', error)
       toast({
         title: "Error",
         description: "Failed to create organization",
@@ -132,12 +108,41 @@ export default function AppAdminDashboard() {
       setCreating(false)
     }
   }
-
   // Load data on component mount
   useEffect(() => {
-    fetchUsers()
-    fetchOrganizations()
-  }, [])
+    console.log('AppAdminDashboard: useEffect called, profile:', profile)
+    if (profile?.is_app_admin) {
+      console.log('AppAdminDashboard: User is app admin, fetching data...')
+      fetchUsers()
+      fetchOrganizations()
+    } else {
+      console.log('AppAdminDashboard: User is not app admin:', profile)
+    }
+  }, [profile])
+
+  // Only allow app admins to access this component
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!profile?.is_app_admin) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-96">
+          <CardHeader>
+            <CardTitle className="text-red-600">Access Denied</CardTitle>
+            <CardDescription>
+              You need App Admin privileges to access this dashboard.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
 
   const nonAdminUsers = users.filter(user => !user.is_app_admin)
 

@@ -17,6 +17,7 @@ import AppAdminDashboard from "@/components/app-admin-dashboard"
 import EnhancedLayout from "@/components/layouts/enhanced-layout"
 import OrganizationSelector from "@/components/organization-selector"
 import { DashboardWidget } from "@/components/dashboard/dashboard-widget"
+import { ProfileSetup } from "@/components/profile-setup"
 
 // ELEV8 Logo Component using the actual logo image
 function ELEV8Logo() {
@@ -150,11 +151,55 @@ export default function AuthPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }
+  }  // If user is logged in, show role-based dashboard
+  if (user) {
+    console.log('User is logged in:', { user: user.id, profile, organizations })
+    
+    // If profile is still loading, show loading state
+    if (profileLoading) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <ELEV8Logo />
+                <p>Loading your profile...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )
+    }
+    
+    // If user doesn't have a profile, show profile setup
+    if (!profile) {
+      console.log('No profile found, showing profile setup')
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md space-y-6">
+            <div className="text-center">
+              <ELEV8Logo />
+              <h1 className="text-2xl font-bold mt-4">Welcome to ELEV8!</h1>
+              <p className="text-muted-foreground mb-6">
+                Signed in as {user.email}
+              </p>
+            </div>
+            
+            <ProfileSetup />
 
-  // If user is logged in, show role-based dashboard
-  if (user) {    // Show App Admin Dashboard for app admins
+            <div className="text-center">
+              <Button onClick={signOut} variant="outline">
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    
+    // Show App Admin Dashboard for app admins
     if (profile?.is_app_admin) {
+      console.log('Showing App Admin Dashboard')
       return (
         <EnhancedLayout>
           <AppAdminDashboard />
@@ -164,6 +209,7 @@ export default function AuthPage() {
 
     // Show Organization Selector for regular users who don't have orgs yet
     if (!organizations || organizations.length === 0) {
+      console.log('No organizations found, showing organization selector')
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
           <div className="w-full max-w-4xl space-y-6">
@@ -188,8 +234,10 @@ export default function AuthPage() {
         </div>
       )
     }    // Show main dashboard for users with organizations
+    console.log('Showing main dashboard with organizations:', organizations)
     return (
-      <EnhancedLayout>        <DashboardWidget 
+      <EnhancedLayout>
+        <DashboardWidget 
           userRole={organizations[0]?.user_role || 'member'}
           isAppAdmin={profile?.is_app_admin || false}
           userName={`${profile?.first_name} ${profile?.last_name}`}

@@ -61,17 +61,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: metadata
         }
       })
-      
-      console.log('Signup response:', { data, error })
+        console.log('Signup response:', { data, error })
       
       if (error) {
-        console.error('Signup error:', error)
+        console.log('Signup error:', error)
         throw error
       }
       
-      return data
-    } catch (err) {
-      console.error('Signup exception:', err)
+      return data    } catch (err) {
+      console.log('Signup exception:', err)
       throw err
     }
   }

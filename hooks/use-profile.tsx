@@ -68,9 +68,7 @@ export function useProfile() {
     if (!user?.id) {
       console.log('No user ID available for profile fetch')
       return
-    }
-
-    setLoading(true)
+    }    setLoading(true)
     try {
       console.log('Fetching profile for user:', user.id)
       
@@ -88,10 +86,11 @@ export function useProfile() {
           console.log('Profile not found, user might need to complete signup')
           setProfile(null)
         } else {
-          console.error('Profile fetch error:', profileError)
+          console.log('Profile fetch error:', profileError)
           throw profileError
         }
       } else {
+        console.log('Setting profile data:', profileData)
         setProfile(profileData)
       }
 
@@ -103,13 +102,13 @@ export function useProfile() {
       console.log('Organizations fetch result:', { orgsData, orgsError })
 
       if (orgsError) {
-        console.error('Organizations fetch error:', orgsError)
+        console.log('Organizations fetch error:', orgsError)
         // Don't throw here, organizations might not exist for app-admin users
-        setOrganizations([])      } else {
+        setOrganizations([])
+      } else {
         setOrganizations(orgsData || [])
-      }
-    } catch (err: any) {
-      console.error('Profile fetch exception:', err)
+      }    } catch (err: any) {
+      console.log('Profile fetch exception:', err)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -201,17 +200,21 @@ export function useProfile() {
       throw err
     }
   }
-
   const getAllOrganizations = async () => {
     try {
+      console.log('getAllOrganizations: Starting fetch...')
       const { data, error } = await supabase
         .from('organizations')
         .select('*')
         .eq('is_active', true)
         .order('name')
 
+      console.log('getAllOrganizations result:', { data, error })
       if (error) throw error
-      return data    } catch (err: any) {
+      console.log('getAllOrganizations: Returning data:', data)
+      return data
+    } catch (err: any) {
+      console.log('getAllOrganizations error:', err)
       setError(err.message)
       throw err
     }
