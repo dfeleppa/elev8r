@@ -1,6 +1,7 @@
 'use client'
 
 import AppAdminDashboard from '@/components/app-admin-dashboard'
+import { DashboardLayout } from '@/components/layouts/dashboard-layout'
 import { useProfile } from '@/hooks/use-profile'
 import { Loader2 } from 'lucide-react'
 
@@ -28,5 +29,9 @@ export default function OrganizationsPage() {
     )
   }
 
-  return <AppAdminDashboard />
+  return (
+    <DashboardLayout currentPage="organizations">
+      <AppAdminDashboard />
+    </DashboardLayout>
+  )
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { DashboardLayout } from '@/components/layouts/dashboard-layout';
 import { useProfile } from '@/hooks/use-profile';
 import { supabase } from '@/lib/supabase';
 
@@ -146,9 +147,9 @@ export default function DebugAdminPage() {
   if (loading) {
     return <div className="p-8">Loading...</div>;
   }
-
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <DashboardLayout currentPage="debug-admin">
+      <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">App Admin Debug Dashboard</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -234,9 +235,9 @@ export default function DebugAdminPage() {
             <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto max-h-48 overflow-y-auto">
               {JSON.stringify(organizations, null, 2)}
             </pre>
-          </div>
-        )}
+          </div>        )}
       </div>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

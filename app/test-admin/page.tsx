@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DashboardLayout } from '@/components/layouts/dashboard-layout'
 import { useAuth } from '@/contexts/auth-context'
 import { useProfile } from '@/hooks/use-profile'
 import { supabase } from '@/lib/supabase'
@@ -149,9 +150,9 @@ export default function TestAppAdminPage() {
       alert('Error creating organization: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
-
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <DashboardLayout currentPage="test-admin">
+      <div className="p-6 max-w-4xl mx-auto space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>App Admin Test Page</CardTitle>
@@ -203,9 +204,9 @@ export default function TestAppAdminPage() {
             <pre className="text-xs overflow-x-auto bg-gray-100 p-4 rounded">
               {JSON.stringify(testResults, null, 2)}
             </pre>
-          </CardContent>
-        </Card>
+          </CardContent>        </Card>
       )}
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }
