@@ -52,11 +52,12 @@ export function useProfile() {
   const [organizations, setOrganizations] = useState<UserOrganization[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
   useEffect(() => {
     if (user) {
+      console.log('User authenticated, fetching profile for ID:', user.id)
       fetchProfile()
     } else {
+      console.log('No user authenticated, clearing profile data')
       setProfile(null)
       setOrganizations([])
       setLoading(false)
@@ -64,7 +65,15 @@ export function useProfile() {
   }, [user])
 
   const fetchProfile = async () => {
+    if (!user?.id) {
+      console.log('No user ID available for profile fetch')
+      return
+    }
+
+    setLoading(true)
     try {
+      console.log('Fetching profile for user:', user.id)
+      
       // Fetch user profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -72,15 +81,35 @@ export function useProfile() {
         .eq('id', user?.id)
         .single()
 
-      if (profileError) throw profileError
-      setProfile(profileData)
+      console.log('Profile fetch result:', { profileData, profileError })
+
+      if (profileError) {
+        if (profileError.code === 'PGRST116') {
+          console.log('Profile not found, user might need to complete signup')
+          setProfile(null)
+        } else {
+          console.error('Profile fetch error:', profileError)
+          throw profileError
+        }
+      } else {
+        setProfile(profileData)
+      }
 
       // Fetch user's organizations using the helper function
+      console.log('Fetching organizations for user:', user.id)
       const { data: orgsData, error: orgsError } = await supabase
         .rpc('get_user_organizations', { user_uuid: user?.id })
 
-      if (orgsError) throw orgsError
-      setOrganizations(orgsData || [])    } catch (err: any) {
+      console.log('Organizations fetch result:', { orgsData, orgsError })
+
+      if (orgsError) {
+        console.error('Organizations fetch error:', orgsError)
+        // Don't throw here, organizations might not exist for app-admin users
+        setOrganizations([])      } else {
+        setOrganizations(orgsData || [])
+      }
+    } catch (err: any) {
+      console.error('Profile fetch exception:', err)
       setError(err.message)
     } finally {
       setLoading(false)

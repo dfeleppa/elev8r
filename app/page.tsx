@@ -14,7 +14,9 @@ import { useProfile } from "@/hooks/use-profile"
 import { toast } from "sonner"
 import type { UserRole } from "@/lib/supabase"
 import AppAdminDashboard from "@/components/app-admin-dashboard"
+import EnhancedLayout from "@/components/layouts/enhanced-layout"
 import OrganizationSelector from "@/components/organization-selector"
+import { DashboardWidget } from "@/components/dashboard/dashboard-widget"
 
 // ELEV8 Logo Component using the actual logo image
 function ELEV8Logo() {
@@ -32,7 +34,7 @@ function ELEV8Logo() {
 
 export default function AuthPage() {
   const { user, signIn, signUp, signOut, loading } = useAuth()
-  const { profile, loading: profileLoading } = useProfile()
+  const { profile, organizations, loading: profileLoading } = useProfile()
   const [mounted, setMounted] = useState(false)
   const [mode, setMode] = useState<"login" | "signup">("login")
   const [userRole, setUserRole] = useState<UserRole>("member")
@@ -127,9 +129,7 @@ export default function AuthPage() {
             toast.error("Organization code is required to join existing organization")
             return
           }
-        }
-
-        // Create user metadata
+        }        // Create user metadata
         const metadata = {
           first_name: formData.firstName,
           last_name: formData.lastName,
@@ -141,7 +141,7 @@ export default function AuthPage() {
             organization_code: formData.existingOrgCode 
           })
         }
-
+        
         await signUp(formData.email, formData.password, metadata)
         toast.success("Account created successfully! Please check your email to confirm.")
       }
@@ -150,36 +150,52 @@ export default function AuthPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }  // If user is logged in, show role-based dashboard
-  if (user) {
-    // Show App Admin Dashboard for app admins
+  }
+
+  // If user is logged in, show role-based dashboard
+  if (user) {    // Show App Admin Dashboard for app admins
     if (profile?.is_app_admin) {
-      return <AppAdminDashboard />
+      return (
+        <EnhancedLayout>
+          <AppAdminDashboard />
+        </EnhancedLayout>
+      )
     }
 
-    // Show Organization Selector for regular users
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-4xl space-y-6">
-          <div className="text-center">
-            <ELEV8Logo />
-            <h1 className="text-2xl font-bold mt-4">Welcome to ELEV8!</h1>
-            <p className="text-muted-foreground">
-              Signed in as {profile?.first_name} {profile?.last_name} ({user.email})
-            </p>
-          </div>
-          
-          <div className="flex justify-center">
-            <OrganizationSelector />
-          </div>
+    // Show Organization Selector for regular users who don't have orgs yet
+    if (!organizations || organizations.length === 0) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-4xl space-y-6">
+            <div className="text-center">
+              <ELEV8Logo />
+              <h1 className="text-2xl font-bold mt-4">Welcome to ELEV8!</h1>
+              <p className="text-muted-foreground">
+                Signed in as {profile?.first_name} {profile?.last_name} ({user.email})
+              </p>
+            </div>
+            
+            <div className="flex justify-center">
+              <OrganizationSelector />
+            </div>
 
-          <div className="text-center">
-            <Button onClick={signOut} variant="outline">
-              Sign Out
-            </Button>
+            <div className="text-center">
+              <Button onClick={signOut} variant="outline">
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )
+    }    // Show main dashboard for users with organizations
+    return (
+      <EnhancedLayout>        <DashboardWidget 
+          userRole={organizations[0]?.user_role || 'member'}
+          isAppAdmin={profile?.is_app_admin || false}
+          userName={`${profile?.first_name} ${profile?.last_name}`}
+          currentOrganization={organizations[0]?.org_name}
+        />
+      </EnhancedLayout>
     )
   }
 
@@ -196,7 +212,8 @@ export default function AuthPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">            {mode === "signup" && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === "signup" && (
               <>
                 <div className="space-y-3">
                   <Label>Role:</Label>
@@ -324,10 +341,10 @@ export default function AuthPage() {
                   type="password"
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  required
+                  onChange={handleInputChange}                  required
                 />
-              </div>            )}
+              </div>
+            )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting 

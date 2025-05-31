@@ -1,9 +1,15 @@
 -- ELEV8 Database Schema - Multi-Organization Role-Based Access Control System
 -- Create enum for user roles (organization-specific, except app-admin)
-CREATE TYPE user_role AS ENUM ('app-admin', 'admin', 'staff', 'member');
+-- Use IF NOT EXISTS to avoid conflicts with existing types
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+        CREATE TYPE user_role AS ENUM ('app-admin', 'admin', 'staff', 'member');
+    END IF;
+END $$;
 
 -- Create organizations table
-CREATE TABLE organizations (
+CREATE TABLE IF NOT EXISTS organizations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT,
@@ -15,7 +21,7 @@ CREATE TABLE organizations (
 );
 
 -- Create profiles table (for basic user info, app-admin role only)
-CREATE TABLE profiles (
+CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users(id) PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   first_name TEXT NOT NULL,
@@ -27,7 +33,7 @@ CREATE TABLE profiles (
 );
 
 -- Create organization_memberships table (junction table for user-org relationships)
-CREATE TABLE organization_memberships (
+CREATE TABLE IF NOT EXISTS organization_memberships (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
@@ -110,7 +116,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create trigger to call the function on user creation
+-- Create trigger to call the function on user creation (drop if exists first)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
@@ -124,15 +131,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create triggers for updated_at
+-- Create triggers for updated_at (drop if exists first)
+DROP TRIGGER IF EXISTS on_profiles_updated ON public.profiles;
 CREATE TRIGGER on_profiles_updated
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
 
+DROP TRIGGER IF EXISTS on_organizations_updated ON public.organizations;
 CREATE TRIGGER on_organizations_updated
   BEFORE UPDATE ON public.organizations
   FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
 
+DROP TRIGGER IF EXISTS on_organization_memberships_updated ON public.organization_memberships;
 CREATE TRIGGER on_organization_memberships_updated
   BEFORE UPDATE ON public.organization_memberships
   FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
@@ -142,10 +152,12 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organization_memberships ENABLE ROW LEVEL SECURITY;
 
--- RLS policies for profiles
+-- RLS policies for profiles (drop existing policies first)
+DROP POLICY IF EXISTS "Users can view their own profile" ON profiles;
 CREATE POLICY "Users can view their own profile" ON profiles
   FOR SELECT USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "App admins can view all profiles" ON profiles;
 CREATE POLICY "App admins can view all profiles" ON profiles
   FOR SELECT USING (
     EXISTS (
@@ -154,13 +166,16 @@ CREATE POLICY "App admins can view all profiles" ON profiles
     )
   );
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
 CREATE POLICY "Users can update their own profile" ON profiles
   FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
 CREATE POLICY "Users can insert their own profile" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
--- RLS policies for organizations
+-- RLS policies for organizations (drop existing policies first)
+DROP POLICY IF EXISTS "Users can view organizations they belong to" ON organizations;
 CREATE POLICY "Users can view organizations they belong to" ON organizations
   FOR SELECT USING (
     -- App admins can see all organizations
@@ -177,6 +192,7 @@ CREATE POLICY "Users can view organizations they belong to" ON organizations
     )
   );
 
+DROP POLICY IF EXISTS "App admins can create organizations" ON organizations;
 CREATE POLICY "App admins can create organizations" ON organizations
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -185,6 +201,7 @@ CREATE POLICY "App admins can create organizations" ON organizations
     )
   );
 
+DROP POLICY IF EXISTS "App admins and org admins can update organizations" ON organizations;
 CREATE POLICY "App admins and org admins can update organizations" ON organizations
   FOR UPDATE USING (
     -- App admins can update any organization
@@ -201,7 +218,8 @@ CREATE POLICY "App admins and org admins can update organizations" ON organizati
     )
   );
 
--- RLS policies for organization_memberships
+-- RLS policies for organization_memberships (drop existing policies first)
+DROP POLICY IF EXISTS "Users can view memberships in their organizations" ON organization_memberships;
 CREATE POLICY "Users can view memberships in their organizations" ON organization_memberships
   FOR SELECT USING (
     -- App admins can see all memberships
@@ -218,6 +236,7 @@ CREATE POLICY "Users can view memberships in their organizations" ON organizatio
     )
   );
 
+DROP POLICY IF EXISTS "App admins can create memberships" ON organization_memberships;
 CREATE POLICY "App admins can create memberships" ON organization_memberships
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -226,6 +245,7 @@ CREATE POLICY "App admins can create memberships" ON organization_memberships
     )
   );
 
+DROP POLICY IF EXISTS "App admins and org admins can update memberships" ON organization_memberships;
 CREATE POLICY "App admins and org admins can update memberships" ON organization_memberships
   FOR UPDATE USING (
     -- App admins can update any membership
@@ -248,13 +268,26 @@ GRANT ALL ON public.profiles TO anon, authenticated;
 GRANT ALL ON public.organizations TO anon, authenticated;
 GRANT ALL ON public.organization_memberships TO anon, authenticated;
 
--- Create indexes for performance
+-- Create indexes for performance (drop if exists first)
+DROP INDEX IF EXISTS idx_profiles_is_app_admin;
 CREATE INDEX idx_profiles_is_app_admin ON profiles(is_app_admin);
+
+DROP INDEX IF EXISTS idx_organizations_code;
 CREATE INDEX idx_organizations_code ON organizations(code);
+
+DROP INDEX IF EXISTS idx_organizations_created_by;
 CREATE INDEX idx_organizations_created_by ON organizations(created_by);
+
+DROP INDEX IF EXISTS idx_memberships_user_id;
 CREATE INDEX idx_memberships_user_id ON organization_memberships(user_id);
+
+DROP INDEX IF EXISTS idx_memberships_organization_id;
 CREATE INDEX idx_memberships_organization_id ON organization_memberships(organization_id);
+
+DROP INDEX IF EXISTS idx_memberships_role;
 CREATE INDEX idx_memberships_role ON organization_memberships(role);
+
+DROP INDEX IF EXISTS idx_memberships_user_org;
 CREATE INDEX idx_memberships_user_org ON organization_memberships(user_id, organization_id);
 
 -- Create helper functions for common queries

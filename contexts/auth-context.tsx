@@ -50,18 +50,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   if (!mounted) {
     return null
   }
-
   const signUp = async (email: string, password: string, metadata?: any) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: metadata
-      }
-    })
+    console.log('Starting signup with metadata:', metadata)
     
-    if (error) throw error
-    return data
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata
+        }
+      })
+      
+      console.log('Signup response:', { data, error })
+      
+      if (error) {
+        console.error('Signup error:', error)
+        throw error
+      }
+      
+      return data
+    } catch (err) {
+      console.error('Signup exception:', err)
+      throw err
+    }
   }
 
   const signIn = async (email: string, password: string) => {
