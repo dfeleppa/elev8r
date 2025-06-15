@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -36,6 +37,7 @@ function ELEV8Logo() {
 export default function AuthPage() {
   const { user, signIn, signUp, signOut, loading } = useAuth()
   const { profile, organizations, loading: profileLoading } = useProfile()
+  const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [mode, setMode] = useState<"login" | "signup">("login")
   const [userRole, setUserRole] = useState<UserRole>("member")
@@ -196,14 +198,21 @@ export default function AuthPage() {
         </div>
       )
     }
-    
-    // Show App Admin Dashboard for app admins
+      // Show App Admin Dashboard for app admins
     if (profile?.is_app_admin) {
-      console.log('Showing App Admin Dashboard')
+      console.log('App admin detected, redirecting to admin dashboard')
+      router.push('/admin')
       return (
-        <EnhancedLayout>
-          <AppAdminDashboard />
-        </EnhancedLayout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <ELEV8Logo />
+                <p>Redirecting to Admin Dashboard...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )
     }
 
