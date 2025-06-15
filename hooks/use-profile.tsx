@@ -162,18 +162,20 @@ export function useProfile() {
         .single()
 
       if (error) throw error
+      
       return data
     } catch (err: any) {
       setError(err.message)
       throw err
     }
   }
+
   const getAllUsers = async () => {
     try {
-      // First get all users with basic profile info
+      // First get all users with complete profile info
       const { data: users, error: usersError } = await supabase
         .from('profiles')
-        .select('id, email, first_name, last_name, is_app_admin, created_at')
+        .select('*') // Select all fields
         .eq('is_active', true)
         .order('first_name')
 
@@ -312,6 +314,61 @@ export function useProfile() {
       throw err
     }
   }
+  const addUserToOrganization = async (userId: string, organizationId: string, role: UserRole = 'member') => {
+    try {
+      // First check if user is already a member of this organization
+      const { data: existingMembership, error: checkError } = await supabase
+        .from('organization_memberships')
+        .select('id, role')
+        .eq('user_id', userId)
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (checkError) throw checkError
+
+      if (existingMembership) {
+        throw new Error('User is already a member of this organization')
+      }
+
+      // Validate role - don't allow app-admin in memberships
+      if (role === 'app-admin') {
+        throw new Error('App admin role cannot be assigned to organization memberships')
+      }
+
+      const { data, error } = await supabase
+        .from('organization_memberships')
+        .insert([{
+          user_id: userId,
+          organization_id: organizationId,
+          role: role
+        }])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (err: any) {
+      setError(err.message)
+      throw err
+    }
+  }
+
+  const removeUserFromOrganization = async (userId: string, organizationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('organization_memberships')
+        .delete()
+        .eq('user_id', userId)
+        .eq('organization_id', organizationId)
+
+      if (error) throw error
+      return true
+    } catch (err: any) {
+      setError(err.message)
+      throw err
+    }
+  }
 
   return {
     profile,
@@ -324,6 +381,8 @@ export function useProfile() {
     getAllUsers,    createOrganizationWithAdmin,
     getAllOrganizations,
     getOrganizationById,
-    refetch: fetchProfile
+    refetch: fetchProfile,
+    addUserToOrganization,
+    removeUserFromOrganization
   }
 }

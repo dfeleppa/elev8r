@@ -36,7 +36,9 @@ import {
   UserPlus,
   CreditCard,
   MoreHorizontal,
-  Bell
+  Bell,
+  Megaphone,
+  CheckSquare
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
@@ -56,6 +58,7 @@ export function DashboardLayout({ children, currentPage }: DashboardLayoutProps)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isAppAdminExpanded, setIsAppAdminExpanded] = useState(true)
   const [isOrganizationExpanded, setIsOrganizationExpanded] = useState(true)
+  const [expandedOrganizations, setExpandedOrganizations] = useState<Record<string, boolean>>({})
   const handleSignOut = async () => {
     try {
       await signOut()
@@ -83,6 +86,13 @@ export function DashboardLayout({ children, currentPage }: DashboardLayoutProps)
       return organizations[0].user_role
     }
     return 'User'
+  }
+
+  const toggleOrganizationExpanded = (orgId: string) => {
+    setExpandedOrganizations(prev => ({
+      ...prev,
+      [orgId]: !prev[orgId]
+    }))
   }
 
   if (loading) {
@@ -268,6 +278,71 @@ export function DashboardLayout({ children, currentPage }: DashboardLayoutProps)
                 )}
               </div>
 
+              {/* Individual Organization Sections - Mobile */}
+              {organizations && organizations.length > 0 && organizations.map((org) => (
+                <div key={`mobile-${org.org_id}`} className="space-y-1">
+                  {/* Organization Header - Mobile */}
+                  <button
+                    onClick={() => toggleOrganizationExpanded(org.org_id)}
+                    className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900"
+                  >
+                    <div className="flex items-center">
+                      <Building2 className="mr-3 h-4 w-4" />
+                      <span className="truncate">{org.org_name}</span>
+                    </div>
+                    <ChevronDown 
+                      className={`h-4 w-4 transition-transform duration-200 ${
+                        expandedOrganizations[org.org_id] ? 'rotate-180' : ''
+                      }`} 
+                    />
+                  </button>
+
+                  {/* Organization Menu Items - Mobile */}
+                  {expandedOrganizations[org.org_id] && (
+                    <div className="ml-6 space-y-1">
+                      <Link
+                        href={`/org/${org.org_id}/calendar`}
+                        className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                          pathname === `/org/${org.org_id}/calendar`
+                            ? 'bg-indigo-100 text-indigo-700'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
+                        onClick={() => setSidebarOpen(false)}
+                      >
+                        <Calendar className="mr-3 h-4 w-4" />
+                        Calendar
+                      </Link>
+
+                      <Link
+                        href={`/org/${org.org_id}/marketing`}
+                        className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                          pathname === `/org/${org.org_id}/marketing`
+                            ? 'bg-indigo-100 text-indigo-700'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
+                        onClick={() => setSidebarOpen(false)}
+                      >
+                        <Megaphone className="mr-3 h-4 w-4" />
+                        Marketing
+                      </Link>
+
+                      <Link
+                        href={`/org/${org.org_id}/tasks`}
+                        className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                          pathname === `/org/${org.org_id}/tasks`
+                            ? 'bg-indigo-100 text-indigo-700'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
+                        onClick={() => setSidebarOpen(false)}
+                      >
+                        <CheckSquare className="mr-3 h-4 w-4" />
+                        Tasks
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              ))}
+
               {/* Regular User Navigation - Mobile */}
               {!profile?.is_app_admin && (
                 <Link
@@ -445,6 +520,68 @@ export function DashboardLayout({ children, currentPage }: DashboardLayoutProps)
               )}
             </div>
 
+            {/* Individual Organization Sections - Desktop */}
+            {organizations && organizations.length > 0 && organizations.map((org) => (
+              <div key={`desktop-${org.org_id}`} className="space-y-1">
+                {/* Organization Header - Clickable to expand/collapse */}
+                <button
+                  onClick={() => toggleOrganizationExpanded(org.org_id)}
+                  className="w-full flex items-center justify-between px-2 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-gray-50 hover:text-gray-900 group"
+                >
+                  <div className="flex items-center">
+                    <Building2 className="mr-3 h-4 w-4" />
+                    <span className="truncate">{org.org_name}</span>
+                  </div>
+                  <ChevronDown 
+                    className={`h-4 w-4 transition-transform duration-200 ${
+                      expandedOrganizations[org.org_id] ? 'rotate-180' : ''
+                    }`} 
+                  />
+                </button>
+
+                {/* Organization Menu Items - Collapsible */}
+                {expandedOrganizations[org.org_id] && (
+                  <div className="ml-6 space-y-1">
+                    <Link
+                      href={`/org/${org.org_id}/calendar`}
+                      className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                        pathname === `/org/${org.org_id}/calendar`
+                          ? 'bg-indigo-100 text-indigo-700'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <Calendar className="mr-3 h-4 w-4" />
+                      Calendar
+                    </Link>
+
+                    <Link
+                      href={`/org/${org.org_id}/marketing`}
+                      className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                        pathname === `/org/${org.org_id}/marketing`
+                          ? 'bg-indigo-100 text-indigo-700'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <Megaphone className="mr-3 h-4 w-4" />
+                      Marketing
+                    </Link>
+
+                    <Link
+                      href={`/org/${org.org_id}/tasks`}
+                      className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                        pathname === `/org/${org.org_id}/tasks`
+                          ? 'bg-indigo-100 text-indigo-700'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <CheckSquare className="mr-3 h-4 w-4" />
+                      Tasks
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ))}
+
             {/* Regular User Navigation */}
             {!profile?.is_app_admin && (
               <div className="space-y-1">
@@ -524,22 +661,79 @@ export function DashboardLayout({ children, currentPage }: DashboardLayoutProps)
           >
             <Menu className="h-4 w-4" />
           </Button>
-          
-          {/* Mobile logo (only visible on mobile) */}
-          <div className="flex items-center space-x-2 lg:hidden">
-            <img 
-              src="/images/Elev8rlogo.png" 
-              alt="ELEV8" 
-              className="h-8 w-8"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none'
-              }}
-            />
-            <span className="text-xl font-bold text-primary">ELEV8</span>
+            {/* Mobile logo and organization (only visible on mobile) */}
+          <div className="flex items-center space-x-3 lg:hidden">
+            <div className="flex items-center space-x-2">
+              <img 
+                src="/images/Elev8rlogo.png" 
+                alt="ELEV8" 
+                className="h-8 w-8"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
+              <span className="text-xl font-bold text-primary">ELEV8</span>
+            </div>
+            
+            {/* Mobile organization indicator */}
+            {organizations && organizations.length > 0 && (
+              <div className="flex items-center">
+                <Badge variant="outline" className="text-xs">
+                  {organizations.length === 1 
+                    ? organizations[0].org_name 
+                    : `${organizations.length} Orgs`
+                  }
+                </Badge>
+              </div>
+            )}
+          </div>{/* Desktop: Organization indicator */}
+          <div className="hidden lg:flex items-center space-x-3 flex-1">
+            {organizations && organizations.length > 0 ? (
+              <div className="flex items-center space-x-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                {organizations.length === 1 ? (
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="text-xs">
+                      {organizations[0].org_name}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      ({organizations[0].user_role})
+                    </span>
+                  </div>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-auto p-2">
+                        <Badge variant="outline" className="text-xs mr-2">
+                          {organizations.length} Organizations
+                        </Badge>
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-64">
+                      <DropdownMenuLabel>Your Organizations</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {organizations.map((org) => (
+                        <DropdownMenuItem key={org.org_id} className="flex flex-col items-start">
+                          <div className="font-medium">{org.org_name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {org.org_code} • {org.user_role}
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            ) : (
+              !profile?.is_app_admin && (
+                <div className="flex items-center space-x-2 text-muted-foreground">
+                  <Building2 className="h-4 w-4" />
+                  <span className="text-xs">No organization assigned</span>
+                </div>
+              )
+            )}
           </div>
-
-          {/* Desktop: Empty space to push content right */}
-          <div className="hidden lg:block flex-1"></div>
 
           {/* Profile section (always visible) */}
           <div className="flex items-center space-x-4">

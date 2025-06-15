@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/contexts/auth-context"
 import { useProfile } from "@/hooks/use-profile"
 import { toast } from "sonner"
-import type { UserRole } from "@/lib/supabase"
 import AppAdminDashboard from "@/components/app-admin-dashboard"
 import EnhancedLayout from "@/components/layouts/enhanced-layout"
 import OrganizationSelector from "@/components/organization-selector"
@@ -40,8 +39,8 @@ export default function AuthPage() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [mode, setMode] = useState<"login" | "signup">("login")
-  const [userRole, setUserRole] = useState<UserRole>("member")
-  const [orgMode, setOrgMode] = useState<"create" | "join">("create")
+  const [isAppAdmin, setIsAppAdmin] = useState(false)
+  const [orgMode, setOrgMode] = useState<"create" | "join" | "none">("create")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
@@ -98,25 +97,11 @@ export default function AuthPage() {
       </div>
     )
   }
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
     }))
-  }
-
-  const getRoleDescription = (role: UserRole) => {
-    switch (role) {
-      case 'app-admin':
-        return 'Platform administrator with full system access'
-      case 'admin':
-        return 'Organization administrator with full gym management access'
-      case 'staff':
-        return 'Gym staff member with limited management access'
-      case 'member':
-        return 'Gym member with basic access to services'
-    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -132,10 +117,8 @@ export default function AuthPage() {
         if (formData.password !== formData.confirmPassword) {
           toast.error("Passwords do not match")
           return
-        }
-
-        // Validate organization info based on role and mode
-        if (userRole !== 'app-admin') {
+        }        // Validate organization info based on role and mode
+        if (!isAppAdmin) {
           if (orgMode === 'create' && !formData.organizationName.trim()) {
             toast.error("Organization name is required")
             return
@@ -144,17 +127,19 @@ export default function AuthPage() {
             toast.error("Organization code is required to join existing organization")
             return
           }
+          // No validation needed for orgMode === 'none'
         }        // Create user metadata
         const metadata = {
           first_name: formData.firstName,
           last_name: formData.lastName,
-          role: userRole,
-          ...(userRole !== 'app-admin' && orgMode === 'create' && { 
+          is_app_admin: isAppAdmin,
+          ...(!isAppAdmin && orgMode === 'create' && { 
             organization_name: formData.organizationName 
           }),
-          ...(userRole !== 'app-admin' && orgMode === 'join' && { 
+          ...(!isAppAdmin && orgMode === 'join' && { 
             organization_code: formData.existingOrgCode 
           })
+          // For orgMode === 'none', no organization metadata is included
         }
         
         await signUp(formData.email, formData.password, metadata)
@@ -283,21 +268,23 @@ export default function AuthPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "signup" && (
-              <>
-                <div className="space-y-3">
-                  <Label>Role:</Label>
-                  <Select value={userRole} onValueChange={(value: UserRole) => setUserRole(value)}>
+              <>                <div className="space-y-3">
+                  <Label>Account Type:</Label>
+                  <Select value={isAppAdmin ? "app-admin" : "user"} onValueChange={(value) => setIsAppAdmin(value === "app-admin")}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select your role" />
+                      <SelectValue placeholder="Select account type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="member">Member</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="user">User</SelectItem>
                       <SelectItem value="app-admin">App Admin</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-sm text-gray-600">{getRoleDescription(userRole)}</p>
+                  <p className="text-sm text-gray-600">
+                    {isAppAdmin 
+                      ? "Platform administrator with full system access" 
+                      : "Regular user with access to organization features"
+                    }
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -323,22 +310,39 @@ export default function AuthPage() {
                   </div>
                 </div>
 
-                {userRole !== 'app-admin' && (
-                  <>
-                    <div className="space-y-3">
-                      <Label>Organization:</Label>
-                      <RadioGroup
+                {!isAppAdmin && (
+                  <>                    <div className="space-y-3">
+                      <Label>Organization:</Label>                      <RadioGroup
                         value={orgMode}
-                        onValueChange={(value: "create" | "join") => setOrgMode(value)}
-                        className="flex gap-6"
+                        onValueChange={(value: "create" | "join" | "none") => setOrgMode(value)}
+                        className="space-y-3"
                       >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="create" id="create" />
-                          <Label htmlFor="create">Create New Organization</Label>
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="create" id="create" />
+                            <Label htmlFor="create">Create New Organization</Label>
+                          </div>
+                          <p className="text-xs text-muted-foreground ml-6">
+                            Start a new organization and become its administrator
+                          </p>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="join" id="join" />
-                          <Label htmlFor="join">Join Existing Organization</Label>
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="join" id="join" />
+                            <Label htmlFor="join">Join Existing Organization</Label>
+                          </div>
+                          <p className="text-xs text-muted-foreground ml-6">
+                            Join an existing organization using an invitation code
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="none" id="none" />
+                            <Label htmlFor="none">Join without an organization</Label>
+                          </div>
+                          <p className="text-xs text-muted-foreground ml-6">
+                            Create your account without joining any organization (you can join one later)
+                          </p>
                         </div>
                       </RadioGroup>
                     </div>
