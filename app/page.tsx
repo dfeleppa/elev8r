@@ -52,10 +52,22 @@ export default function AuthPage() {
     organizationName: "",
     existingOrgCode: "",
   })
-
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Handle navigation for authenticated users
+  useEffect(() => {
+    if (user && profile && !profileLoading) {
+      if (profile.is_app_admin) {
+        console.log('App admin detected, redirecting to admin dashboard')
+        router.push('/admin')
+      } else if (organizations && organizations.length > 0) {
+        console.log('User has organizations, redirecting to dashboard')
+        router.push('/dashboard')
+      }
+    }
+  }, [user, profile, profileLoading, organizations, router])
   // Prevent hydration mismatch by showing loading until mounted
   if (!mounted) {
     return (
@@ -197,11 +209,9 @@ export default function AuthPage() {
           </div>
         </div>
       )
-    }
-      // Show App Admin Dashboard for app admins
+    }    // Show App Admin Dashboard for app admins
     if (profile?.is_app_admin) {
-      console.log('App admin detected, redirecting to admin dashboard')
-      router.push('/admin')
+      console.log('App admin detected, showing loading while redirecting')
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
           <Card className="w-full max-w-md">
@@ -243,16 +253,18 @@ export default function AuthPage() {
         </div>
       )
     }    // Show main dashboard for users with organizations
-    console.log('Showing main dashboard with organizations:', organizations)
+    console.log('User has organizations, showing loading while redirecting')
     return (
-      <EnhancedLayout>
-        <DashboardWidget 
-          userRole={organizations[0]?.user_role || 'member'}
-          isAppAdmin={profile?.is_app_admin || false}
-          userName={`${profile?.first_name} ${profile?.last_name}`}
-          currentOrganization={organizations[0]?.org_name}
-        />
-      </EnhancedLayout>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <ELEV8Logo />
+              <p>Redirecting to Dashboard...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 

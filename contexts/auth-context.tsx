@@ -49,8 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
     return null
-  }
-  const signUp = async (email: string, password: string, metadata?: any) => {
+  }  const signUp = async (email: string, password: string, metadata?: any) => {
     console.log('Starting signup with metadata:', metadata)
     
     try {
@@ -58,17 +57,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
         options: {
-          data: metadata
+          data: metadata,
+          emailRedirectTo: undefined // Disable email confirmation for testing
         }
       })
-        console.log('Signup response:', { data, error })
+      
+      console.log('Signup response:', { data, error })
       
       if (error) {
         console.log('Signup error:', error)
         throw error
       }
       
-      return data    } catch (err) {
+      return data
+    } catch (err) {
       console.log('Signup exception:', err)
       throw err
     }

@@ -8,8 +8,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Building, Users, Plus } from 'lucide-react'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from '@/components/ui/dialog'
+import { Loader2, Building2, Users, BarChart3, ExternalLink, Plus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 
 interface User {
@@ -29,6 +38,7 @@ interface Organization {
 }
 
 export default function AppAdminDashboard() {
+  const router = useRouter()
   const { profile, loading, getAllUsers, getAllOrganizations, createOrganizationWithAdmin } = useProfile()
   const [users, setUsers] = useState<User[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -217,7 +227,7 @@ export default function AppAdminDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Building className="h-5 w-5 mr-2" />
+              <Building2 className="h-5 w-5 mr-2" />
               Organizations
             </CardTitle>
             <CardDescription>
@@ -253,49 +263,54 @@ export default function AppAdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Users Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Users className="h-5 w-5 mr-2" />
-              Users
-            </CardTitle>
-            <CardDescription>
-              {users.length} total users ({users.filter(u => u.is_app_admin).length} app admins)
-            </CardDescription>
+        {/* All Users Card */}
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          onClick={() => router.push('/users')}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">All Users</CardTitle>
+            <div className="flex items-center space-x-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <ExternalLink className="h-3 w-3 text-muted-foreground" />
+            </div>
           </CardHeader>
           <CardContent>
-            {loadingUsers ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {users.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">
-                    No users found
-                  </p>
-                ) : (
-                  users.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <h4 className="font-medium">
-                          {user.first_name} {user.last_name}
-                        </h4>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        {user.is_app_admin && (
-                          <Badge variant="destructive">App Admin</Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
+            <div className="text-2xl font-bold">{users.length}</div>
+            <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
+              <span>{users.filter(user => user.is_app_admin).length} admins</span>
+              <span>{users.filter(user => !user.is_app_admin).length} users</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Click to manage all users →
+            </p>
           </CardContent>
         </Card>
+
+        {/* Analytics Card - Placeholder */}
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          onClick={() => router.push('/analytics')}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Analytics</CardTitle>
+            <div className="flex items-center space-x-2">
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <ExternalLink className="h-3 w-3 text-muted-foreground" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Coming Soon</div>
+            <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-2">
+              <span>User activity</span>
+              <span>Org metrics</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Click to view analytics →
+            </p>
+          </CardContent>
+        </Card>
+
       </div>
     </div>
   )

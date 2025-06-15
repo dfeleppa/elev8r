@@ -168,17 +168,38 @@ export function useProfile() {
       throw err
     }
   }
-
   const getAllUsers = async () => {
     try {
-      const { data, error } = await supabase
+      // First get all users with basic profile info
+      const { data: users, error: usersError } = await supabase
         .from('profiles')
-        .select('id, email, first_name, last_name, is_app_admin')
+        .select('id, email, first_name, last_name, is_app_admin, created_at')
         .eq('is_active', true)
         .order('first_name')
 
-      if (error) throw error
-      return data
+      if (usersError) throw usersError
+
+      // Then get organization memberships for each user
+      const usersWithOrgs = await Promise.all(
+        (users || []).map(async (user) => {
+          try {
+            const { data: userOrgs, error: orgsError } = await supabase
+              .rpc('get_user_organizations', { user_uuid: user.id })
+
+            if (orgsError) {
+              console.log(`Error fetching organizations for user ${user.id}:`, orgsError)
+              return { ...user, organizations: [] }
+            }
+
+            return { ...user, organizations: userOrgs || [] }
+          } catch (err) {
+            console.log(`Exception fetching organizations for user ${user.id}:`, err)
+            return { ...user, organizations: [] }
+          }
+        })
+      )
+
+      return usersWithOrgs
     } catch (err: any) {
       setError(err.message)
       throw err
@@ -197,24 +218,96 @@ export function useProfile() {
       return data[0] // Returns { organization_id, organization_code }
     } catch (err: any) {
       setError(err.message)
-      throw err
-    }
+      throw err    }
   }
+
   const getAllOrganizations = async () => {
     try {
       console.log('getAllOrganizations: Starting fetch...')
-      const { data, error } = await supabase
+      const { data: orgs, error } = await supabase
         .from('organizations')
         .select('*')
         .eq('is_active', true)
         .order('name')
 
-      console.log('getAllOrganizations result:', { data, error })
+      console.log('getAllOrganizations result:', { data: orgs, error })
       if (error) throw error
-      console.log('getAllOrganizations: Returning data:', data)
-      return data
+
+      // Get member counts for each organization
+      const orgsWithCounts = await Promise.all(
+        (orgs || []).map(async (org) => {
+          try {
+            const { data: members, error: membersError } = await supabase
+              .from('organization_members')
+              .select('user_id')
+              .eq('organization_id', org.id)
+              .eq('is_active', true)
+
+            if (membersError) {
+              console.log(`Error fetching members for org ${org.id}:`, membersError)
+              return { ...org, member_count: 0 }
+            }
+
+            return { ...org, member_count: members?.length || 0 }
+          } catch (err) {
+            console.log(`Exception fetching members for org ${org.id}:`, err)
+            return { ...org, member_count: 0 }
+          }
+        })
+      )
+
+      console.log('getAllOrganizations: Returning data with counts:', orgsWithCounts)
+      return orgsWithCounts
     } catch (err: any) {
       console.log('getAllOrganizations error:', err)
+      setError(err.message)
+      throw err
+    }
+  }
+
+  const getOrganizationById = async (organizationId: string) => {
+    try {
+      console.log('getOrganizationById: Starting fetch for', organizationId)
+      
+      // Get organization details
+      const { data: org, error: orgError } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', organizationId)
+        .eq('is_active', true)
+        .single()
+
+      if (orgError) throw orgError
+
+      // Get organization members with their profile info
+      const { data: members, error: membersError } = await supabase
+        .from('organization_members')
+        .select(`
+          user_id,
+          role,
+          joined_at,
+          is_active,
+          profiles:user_id (
+            id,
+            email,
+            first_name,
+            last_name,
+            is_app_admin
+          )
+        `)
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .order('joined_at', { ascending: false })
+
+      if (membersError) {
+        console.log('Error fetching members:', membersError)
+        return { ...org, members: [] }
+      }
+
+      console.log('getOrganizationById: Returning data:', { ...org, members })
+      return { ...org, members: members || [] }
+    } catch (err: any) {
+      console.log('getOrganizationById error:', err)
       setError(err.message)
       throw err
     }
@@ -228,8 +321,9 @@ export function useProfile() {
     createProfile,
     updateProfile,
     getOrganizationByCode,
-    getAllUsers,
-    createOrganizationWithAdmin,    getAllOrganizations,
+    getAllUsers,    createOrganizationWithAdmin,
+    getAllOrganizations,
+    getOrganizationById,
     refetch: fetchProfile
   }
 }

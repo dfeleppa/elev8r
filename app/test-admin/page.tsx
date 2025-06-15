@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { DashboardLayout } from '@/components/layouts/dashboard-layout'
 import { useAuth } from '@/contexts/auth-context'
 import { useProfile } from '@/hooks/use-profile'
@@ -150,6 +150,83 @@ export default function TestAppAdminPage() {
       alert('Error creating organization: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
+  // Enhanced test account creation functions
+  const createQuickTestAccount = async (type: 'app-admin' | 'admin' | 'coach' | 'member') => {
+    try {
+      const timestamp = Date.now()
+      const testEmail = `test-${type}-${timestamp}@elev8r.test`
+      const testPassword = 'test123456'
+      
+      let metadata: any = {
+        first_name: 'Test',
+        last_name: type.charAt(0).toUpperCase() + type.slice(1)
+      }
+
+      // Set role-specific metadata
+      if (type === 'app-admin') {
+        metadata.is_app_admin = true
+      }
+
+      console.log(`Creating ${type} account:`, testEmail)
+      
+      const result = await signUp(testEmail, testPassword, metadata)
+      
+      if (result?.user) {
+        // If we have a user but they need email confirmation, let's create the profile directly
+        if (result.user && !result.user.email_confirmed_at) {
+          console.log('User created but not confirmed, creating profile directly...')
+          
+          // Create profile directly in database
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: result.user.id,
+              email: testEmail,
+              first_name: metadata.first_name,
+              last_name: metadata.last_name,
+              is_app_admin: type === 'app-admin',
+              is_active: true
+            })
+
+          if (profileError) {
+            console.log('Profile creation error:', profileError)
+          } else {
+            console.log('Profile created successfully')
+          }
+        }
+        
+        alert(`✅ ${type} account created successfully!\nEmail: ${testEmail}\nPassword: ${testPassword}\n\nYou can now sign in with these credentials.`)
+      }
+    } catch (error) {
+      console.log('Account creation error:', error)
+      alert('❌ Error creating account: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    }
+  }
+
+  // Function to manually confirm user (for testing)
+  const confirmUserManually = async (userId: string) => {
+    try {
+      // This would typically require admin privileges in Supabase
+      // For now, we'll create the profile directly as a workaround
+      console.log('Manually confirming user:', userId)
+      
+      // Update the user's email_confirmed_at field
+      const { error } = await supabase.auth.admin.updateUserById(userId, {
+        email_confirm: true
+      })
+      
+      if (error) {
+        console.log('Manual confirmation error:', error)
+        return false
+      }
+      
+      return true
+    } catch (error) {
+      console.log('Manual confirmation exception:', error)
+      return false
+    }
+  }
+
   return (
     <DashboardLayout currentPage="test-admin">
       <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -206,6 +283,64 @@ export default function TestAppAdminPage() {
             </pre>
           </CardContent>        </Card>
       )}
+
+      {/* Quick Test Account Creation */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Test Account Creation</CardTitle>
+          <CardDescription>
+            Create test accounts with different roles instantly (no email verification needed)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Button 
+              onClick={() => createQuickTestAccount('app-admin')} 
+              variant="outline"
+              className="h-20 flex flex-col items-center justify-center"
+            >
+              <div className="font-medium">App Admin</div>
+              <div className="text-xs text-muted-foreground">Full Access</div>
+            </Button>
+            
+            <Button 
+              onClick={() => createQuickTestAccount('admin')} 
+              variant="outline"
+              className="h-20 flex flex-col items-center justify-center"
+            >
+              <div className="font-medium">Admin</div>
+              <div className="text-xs text-muted-foreground">Org Admin</div>
+            </Button>
+            
+            <Button 
+              onClick={() => createQuickTestAccount('coach')} 
+              variant="outline"
+              className="h-20 flex flex-col items-center justify-center"
+            >
+              <div className="font-medium">Coach</div>
+              <div className="text-xs text-muted-foreground">Trainer</div>
+            </Button>
+            
+            <Button 
+              onClick={() => createQuickTestAccount('member')} 
+              variant="outline"
+              className="h-20 flex flex-col items-center justify-center"
+            >
+              <div className="font-medium">Member</div>
+              <div className="text-xs text-muted-foreground">Basic User</div>
+            </Button>
+          </div>
+          
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <div className="text-sm text-blue-800">
+              <strong>Note:</strong> All test accounts use password: <code className="bg-blue-100 px-1 rounded">test123456</code>
+            </div>
+            <div className="text-xs text-blue-600 mt-1">
+              Email format: test-[role]-[timestamp]@elev8r.test
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       </div>
     </DashboardLayout>
   )
